@@ -49,7 +49,6 @@ try:
     print(f"Expected Return: {results['return_on_capital']:.2f}%")
     
     print(f"\nOptimization Method Used: {results['optimization_method']}")
-    print(f"Simulations Run: {results['n_simulations']}")
     
     print("\n" + "-"*60)
     print("OPTIMAL POSITIONS (Calls to Sell):")
