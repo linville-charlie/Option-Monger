@@ -109,6 +109,7 @@ def get_all_strikes(ticker: str, expiration: str, use_live_data: bool = True, re
             print(f"Common strike increment: ${common_increment:.2f}")
         
         # Option 1: Try to fetch real market data (requires subscription)
+        # For far-dated expirations, many strikes may not exist
         fetch_real_data = True  # Fetch real option data from IBKR
         
         if fetch_real_data:
@@ -120,7 +121,7 @@ def get_all_strikes(ticker: str, expiration: str, use_live_data: bool = True, re
             
             for i, strike in enumerate(real_strikes):
                 if i % 10 == 0 and i > 0:
-                    print(f"Progress: {i}/{len(real_strikes)} strikes...")
+                    print(f"Progress: {i}/{len(real_strikes)} strikes fetched...")
                 
                 try:
                     option_data = fetcher.get_option_data(
@@ -144,8 +145,15 @@ def get_all_strikes(ticker: str, expiration: str, use_live_data: bool = True, re
                     deltas_list.append(0.0)
                 
                 time.sleep(0.1)  # Rate limiting
+            
+            # Check if we got enough real data
+            valid_data = sum(1 for b in bids_list if b > 0)
+            if valid_data < 10:  # Less than 10 valid strikes
+                print(f"\nWarning: Only {valid_data} strikes have market data.")
+                print("Falling back to demo data for better results.")
+                fetch_real_data = False  # Force demo mode
         
-        else:
+        if not fetch_real_data:
             # Option 2: Generate realistic demo data for the REAL strikes
             print("\nGenerating demo bid/delta data for real IBKR strikes...")
             print("(For real market data, enable fetch_real_data and ensure you have subscriptions)")
