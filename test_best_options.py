@@ -11,7 +11,7 @@ print("="*60)
 
 # Test parameters
 ticker = "AAPL"
-expiration = "20250117"  # January 17, 2025
+expiration = "20250812"  # August 12, 2025 (tomorrow)
 capital = 100000  # $100,000 to invest
 
 print(f"\nParameters:")
@@ -41,12 +41,12 @@ try:
     
     # Display results
     print(f"\nShares to Buy: {results['shares_needed']:,}")
-    print(f"Share Purchase Cost: ${results['share_cost']:,.2f}")
+    print(f"Share Purchase Cost: ${results['capital_for_shares']:,.2f}")
     print(f"Premium Collected: ${results['premium_collected']:,.2f}")
-    print(f"Net Investment: ${results['share_cost'] - results['premium_collected']:,.2f}")
+    print(f"Net Investment: ${results['net_capital_after_premium']:,.2f}")
     
     print(f"\nExpected P&L: ${results['expected_pnl']:,.2f}")
-    print(f"Expected Return: {results['expected_return']:.2%}")
+    print(f"Expected Return: {results['return_on_capital']:.2f}%")
     
     print(f"\nOptimization Method Used: {results['optimization_method']}")
     print(f"Simulations Run: {results['n_simulations']}")
@@ -61,10 +61,16 @@ try:
         
         for strike, contracts in results['optimal_positions'].items():
             if contracts > 0:
-                # Get the bid and delta for this strike
-                idx = results['debug_info']['strikes'].index(strike)
-                bid = results['debug_info']['bids'][idx]
-                delta = results['debug_info']['deltas'][idx]
+                # Get the bid and delta for this strike from position_details
+                detail = next((d for d in results['position_details'] if d['strike'] == strike), None)
+                if detail:
+                    bid = detail['bid']
+                    delta = detail['delta']
+                else:
+                    # Fallback to finding in arrays
+                    idx = list(results['strikes']).index(strike)
+                    bid = results['bids'].iloc[idx]
+                    delta = results['deltas'].iloc[idx]
                 
                 premium_per_contract = bid * 100
                 total_premium = premium_per_contract * contracts
