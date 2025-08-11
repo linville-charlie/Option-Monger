@@ -102,6 +102,13 @@ def get_all_strikes(ticker: str, expiration: str, use_live_data: bool = True, re
         print(f"Found {len(real_strikes)} real strikes from IBKR")
         print(f"Strike range: ${min(real_strikes):.2f} to ${max(real_strikes):.2f}")
         
+        # Filter to reasonable strikes (within 50% of current price)
+        # This avoids trying to fetch data for strikes that don't actually trade
+        reasonable_strikes = [s for s in real_strikes if 0.5 * underlying_price <= s <= 1.5 * underlying_price]
+        if len(reasonable_strikes) < len(real_strikes):
+            print(f"Filtering to {len(reasonable_strikes)} reasonable strikes (50%-150% of stock price)")
+            real_strikes = reasonable_strikes
+        
         # Determine actual increments
         if len(real_strikes) > 1:
             increments = [real_strikes[i] - real_strikes[i-1] for i in range(1, min(10, len(real_strikes)))]
