@@ -109,7 +109,7 @@ def get_all_strikes(ticker: str, expiration: str, use_live_data: bool = True, re
             print(f"Common strike increment: ${common_increment:.2f}")
         
         # Option 1: Try to fetch real market data (requires subscription)
-        fetch_real_data = False  # Set to True when IB Gateway connection is working
+        fetch_real_data = True  # Fetch real option data from IBKR
         
         if fetch_real_data:
             print(f"\nFetching market data for {len(real_strikes)} strikes...")
