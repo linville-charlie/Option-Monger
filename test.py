@@ -12,7 +12,7 @@ class TradeApp(EWrapper, EClient):
         print("AccountSummaryEnd. ReqId:", reqId)
     
 app = TradeApp()      
-app.connect("127.0.0.1", 8000, clientId=0)
+app.connect("172.21.112.1", 8000, clientId=0)
 time.sleep(1)
 app.reqAccountSummary(9001, "All", 'NetLiquidation')
 app.run()

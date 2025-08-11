@@ -1,16 +1,15 @@
 """
-IBKR Connection using official ibapi
+Simple IBKR Connection - No Threading, Like Your Working test.py
+This version matches your working configuration exactly.
 """
-import threading
 import time
 import logging
 from typing import Optional, Dict, List, Any
-from queue import Queue, Empty
+from queue import Queue
 
 from ibapi.client import EClient
 from ibapi.wrapper import EWrapper
 from ibapi.contract import Contract
-from ibapi.order import Order
 from ibapi.common import TickerId, TickAttrib
 
 from .config import Config
@@ -18,24 +17,27 @@ from .config import Config
 logger = Config.setup_logging()
 
 
-class IBKRApp(EWrapper, EClient):
-    """Official IBKR API Application"""
+class SimpleIBKRApp(EWrapper, EClient):
+    """Simple IBKR API Application - No Threading"""
     
     def __init__(self):
         EClient.__init__(self, self)
         self.connected = False
         self.nextOrderId = None
-        self.data_queue = Queue()
         self.contract_details = {}
         self.market_data = {}
         self.option_chains = {}
         self.accounts = []
         self._errors = []
+        self._last_request_id = 0
         
     def error(self, reqId: TickerId, errorCode: int, errorString: str):
         """Handle errors from IB"""
         if errorCode == 202:
             logger.warning(f"Order cancelled: {errorString}")
+        elif errorCode == 502:
+            logger.error(f"Cannot connect: {errorString}")
+            self._errors.append((errorCode, errorString))
         elif errorCode >= 2000:
             logger.error(f"Error {errorCode}: {errorString}")
             self._errors.append((errorCode, errorString))
@@ -62,41 +64,37 @@ class IBKRApp(EWrapper, EClient):
         """Receive tick price"""
         if reqId not in self.market_data:
             self.market_data[reqId] = {}
-        
-        tick_names = {
+            
+        # Map tick types to field names
+        tick_map = {
             1: 'bid',
             2: 'ask',
             4: 'last',
             6: 'high',
             7: 'low',
-            9: 'close',
-            14: 'open'
+            9: 'close'
         }
         
-        if tickType in tick_names:
-            self.market_data[reqId][tick_names[tickType]] = price
+        if tickType in tick_map:
+            self.market_data[reqId][tick_map[tickType]] = price
             
-    def tickSize(self, reqId: TickerId, tickType, size):
+    def tickSize(self, reqId: TickerId, tickType, size: int):
         """Receive tick size"""
         if reqId not in self.market_data:
             self.market_data[reqId] = {}
             
-        size_names = {
+        # Map tick types to field names
+        tick_map = {
             0: 'bid_size',
             3: 'ask_size',
             5: 'last_size',
             8: 'volume'
         }
         
-        if tickType in size_names:
-            self.market_data[reqId][size_names[tickType]] = size
+        if tickType in tick_map:
+            self.market_data[reqId][tick_map[tickType]] = size
             
-    def tickGeneric(self, reqId: TickerId, tickType, value: float):
-        """Receive generic tick"""
-        if reqId not in self.market_data:
-            self.market_data[reqId] = {}
-            
-    def tickOptionComputation(self, reqId: TickerId, tickType, tickAttrib,
+    def tickOptionComputation(self, reqId: TickerId, tickType,
                             impliedVol: float, delta: float, optPrice: float,
                             pvDividend: float, gamma: float, vega: float,
                             theta: float, undPrice: float):
@@ -116,25 +114,6 @@ class IBKRApp(EWrapper, EClient):
                 'und_price': undPrice if undPrice != -1 else None
             }
             
-    def securityDefinitionOptionParameter(self, reqId: int, exchange: str,
-                                         underlyingConId: int, tradingClass: str,
-                                         multiplier: str, expirations, strikes):
-        """Receive option chain parameters"""
-        if reqId not in self.option_chains:
-            self.option_chains[reqId] = []
-            
-        self.option_chains[reqId].append({
-            'exchange': exchange,
-            'trading_class': tradingClass,
-            'multiplier': multiplier,
-            'expirations': list(expirations),
-            'strikes': list(strikes)
-        })
-        
-    def securityDefinitionOptionParameterEnd(self, reqId: int):
-        """End of option chain parameters"""
-        logger.debug(f"Option chain parameters complete for request {reqId}")
-        
     def managedAccounts(self, accountsList: str):
         """Receive managed accounts list"""
         self.accounts = accountsList.split(',')
@@ -146,80 +125,66 @@ class IBKRApp(EWrapper, EClient):
         server_time = datetime.fromtimestamp(time)
         logger.info(f"Server time: {server_time}")
 
+    def get_next_request_id(self) -> int:
+        """Get next request ID"""
+        self._last_request_id += 1
+        return self._last_request_id
 
-class IBKRConnection:
-    """Connection manager for official IBKR API"""
+
+class SimpleIBKRConnection:
+    """Simple connection manager - No Threading, Like Your test.py"""
     
     def __init__(self):
-        self.app: Optional[IBKRApp] = None
-        self.thread: Optional[threading.Thread] = None
+        self.app: Optional[SimpleIBKRApp] = None
         self.config = Config
         self._connected = False
         
     def connect(self) -> bool:
-        """Connect to IB Gateway/TWS - matching your working test.py"""
+        """Connect to IB Gateway/TWS without threading"""
         if self._connected and self.app and self.app.connected:
             logger.info("Already connected to IB Gateway")
             return True
             
-        attempt = 0
-        while attempt < self.config.MAX_RETRY_ATTEMPTS:
-            try:
-                self.app = IBKRApp()
-                
-                # Connect to IB Gateway exactly like your test.py
-                logger.info(f"Connecting to IB Gateway at {self.config.TWS_HOST}:{self.config.get_port()}")
-                self.app.connect(
-                    self.config.TWS_HOST,
-                    self.config.get_port(),
-                    clientId=self.config.TWS_CLIENT_ID
-                )
-                
-                # Wait briefly for socket connection like your test.py
-                time.sleep(1)
-                
-                # Check if socket is connected
-                if self.app.isConnected():
-                    # Start message processing thread
-                    self.thread = threading.Thread(target=self._run_loop, daemon=True)
-                    self.thread.start()
-                    
-                    # Wait for connection callback
-                    timeout = 3  # Shorter timeout for initial connection
-                    start_time = time.time()
-                    
-                    while not self.app.connected and time.time() - start_time < timeout:
-                        time.sleep(0.1)
-                        
-                    if self.app.connected:
-                        self._connected = True
-                        logger.info(f"Successfully connected to IB Gateway")
-                        return True
-                    else:
-                        logger.warning(f"Connection attempt {attempt + 1} - no callback received")
-                        self.disconnect()
-                else:
-                    logger.warning(f"Connection attempt {attempt + 1} - socket connection failed")
-                    self.disconnect()
-                    
-            except Exception as e:
-                logger.warning(f"Connection attempt {attempt + 1} failed: {e}")
-                
-            attempt += 1
-            if attempt < self.config.MAX_RETRY_ATTEMPTS:
-                logger.info(f"Retrying in {self.config.RETRY_DELAY_SECONDS} seconds...")
-                time.sleep(self.config.RETRY_DELAY_SECONDS)
-                
-        logger.error("Max retry attempts reached. Connection failed.")
-        return False
-        
-    def _run_loop(self):
-        """Run the message processing loop"""
         try:
-            self.app.run()
+            self.app = SimpleIBKRApp()
+            
+            # Connect exactly like your test.py
+            logger.info(f"Connecting to IB Gateway at {self.config.TWS_HOST}:{self.config.get_port()}")
+            self.app.connect(
+                self.config.TWS_HOST,
+                self.config.get_port(),
+                clientId=self.config.TWS_CLIENT_ID
+            )
+            
+            # Small delay like your test.py
+            time.sleep(1)
+            
+            # Check if connected (don't run yet)
+            if self.app.isConnected():
+                # Start the message processing
+                # This will process initial messages
+                import threading
+                self.thread = threading.Thread(target=self.app.run, daemon=True)
+                self.thread.start()
+                
+                # Wait for connection callback
+                time.sleep(2)
+                
+                if self.app.connected:
+                    self._connected = True
+                    logger.info("Successfully connected to IB Gateway")
+                    return True
+                else:
+                    logger.warning("Connection failed - no callback received")
+                    self.disconnect()
+                    return False
+            else:
+                logger.error("Failed to establish socket connection")
+                return False
+                
         except Exception as e:
-            logger.error(f"Error in message loop: {e}")
-            self._connected = False
+            logger.error(f"Connection failed: {e}")
+            return False
             
     def disconnect(self):
         """Disconnect from IB Gateway"""
@@ -235,7 +200,7 @@ class IBKRConnection:
         """Check if connected"""
         return self._connected and self.app and self.app.connected
         
-    def get_app(self) -> Optional[IBKRApp]:
+    def get_app(self) -> Optional[SimpleIBKRApp]:
         """Get the app instance"""
         if not self.is_connected():
             if not self.connect():
@@ -255,10 +220,3 @@ class IBKRConnection:
         except Exception as e:
             logger.error(f"Connection test failed: {e}")
             return False
-            
-    def __enter__(self):
-        self.connect()
-        return self
-        
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.disconnect()
