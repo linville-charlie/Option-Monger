@@ -11,7 +11,7 @@ print("="*60)
 
 # Test parameters
 ticker = "AAPL"
-expiration = "20250117"  # January 17, 2025 (monthly expiration)
+expiration = "20250815"  # August 15, 2025 (Friday after tomorrow)
 capital = 100000  # $100,000 to invest
 
 print(f"\nParameters:")
