@@ -639,7 +639,7 @@ def find_best_options(ticker: str,
     # Get option data and actual stock price
     from core.simple_real_strikes import get_all_strikes
     bids, strikes, deltas, current_stock_price = get_all_strikes(
-        ticker, expiration, use_live_data, return_stock_price=True
+        ticker, expiration, return_stock_price=True
     )
     
     if len(strikes) == 0:
