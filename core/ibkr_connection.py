@@ -112,21 +112,55 @@ class IBKRApp(EWrapper, EClient):
                             impliedVol: float, delta: float, optPrice: float,
                             pvDividend: float, gamma: float, vega: float,
                             theta: float, undPrice: float):
-        """Receive option Greeks"""
+        """Receive option Greeks
+        
+        Tick types according to IBKR docs:
+        10 = Bid Option Computation
+        11 = Ask Option Computation  
+        12 = Last Option Computation
+        13 = Model Option Computation
+        53 = Delayed Bid Option Computation
+        54 = Delayed Ask Option Computation
+        55 = Delayed Last Option Computation
+        56 = Delayed Model Option Computation
+        """
         if reqId not in self.market_data:
             self.market_data[reqId] = {}
             
-        # Model Greeks (tickType 13)
-        if tickType == 13:
-            self.market_data[reqId]['greeks'] = {
-                'implied_vol': impliedVol if impliedVol != -1 else None,
-                'delta': delta if delta != -2 else None,
-                'gamma': gamma if gamma != -2 else None,
-                'vega': vega if vega != -2 else None,
-                'theta': theta if theta != -2 else None,
-                'opt_price': optPrice if optPrice != -1 else None,
-                'und_price': undPrice if undPrice != -1 else None
+        # Map tick types to field names
+        tick_type_names = {
+            10: 'bid_greeks',
+            11: 'ask_greeks',
+            12: 'last_greeks',
+            13: 'model_greeks',
+            53: 'delayed_bid_greeks',
+            54: 'delayed_ask_greeks',
+            55: 'delayed_last_greeks',
+            56: 'delayed_model_greeks'
+        }
+        
+        if tickType in tick_type_names:
+            field_name = tick_type_names[tickType]
+            
+            # Store the Greeks data
+            greeks_data = {
+                'implied_vol': impliedVol if impliedVol > 0 else None,
+                'delta': delta if delta != -2 and delta != -1 else None,
+                'gamma': gamma if gamma != -2 and gamma != -1 else None,
+                'vega': vega if vega != -2 and vega != -1 else None,
+                'theta': theta if theta != -2 and theta != -1 else None,
+                'opt_price': optPrice if optPrice > 0 else None,
+                'und_price': undPrice if undPrice > 0 else None
             }
+            
+            self.market_data[reqId][field_name] = greeks_data
+            
+            # For backward compatibility, also store model Greeks as 'greeks'
+            if tickType == 13:
+                self.market_data[reqId]['greeks'] = greeks_data
+            # Use delayed model if model not available
+            elif tickType == 56 and 'greeks' not in self.market_data[reqId]:
+                self.market_data[reqId]['greeks'] = greeks_data
             
     def securityDefinitionOptionParameter(self, reqId: int, exchange: str,
                                          underlyingConId: int, tradingClass: str,
@@ -157,6 +191,16 @@ class IBKRApp(EWrapper, EClient):
         from datetime import datetime
         server_time = datetime.fromtimestamp(time)
         logger.info(f"Server time: {server_time}")
+    
+    def marketDataType(self, reqId: TickerId, marketDataType: int):
+        """Receive market data type notification
+        1 = Real-time
+        2 = Frozen
+        3 = Delayed
+        4 = Delayed-frozen
+        """
+        data_types = {1: "Real-time", 2: "Frozen", 3: "Delayed", 4: "Delayed-frozen"}
+        logger.debug(f"Market data type for {reqId}: {data_types.get(marketDataType, marketDataType)}")
 
 
 class IBKRConnection:
