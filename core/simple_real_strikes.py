@@ -74,14 +74,16 @@ def get_all_strikes(ticker: str, expiration: str, use_live_data: bool = True, re
         fetcher = OptionsDataFetcher(conn)
         
         # Get underlying price
-        print(f"Fetching data for {ticker}...")
+        print(f"Fetching stock price for {ticker}...")
         underlying_price = fetcher.get_underlying_price(ticker)
-        if underlying_price:
-            print(f"Underlying price: ${underlying_price:.2f}")
+        if underlying_price and underlying_price > 0:
+            print(f"Stock price: ${underlying_price:.2f}")
         else:
-            underlying_price = 100.0  # Fallback
+            print(f"WARNING: Could not fetch stock price")
+            print("Check that market is open and you have market data permissions")
+            underlying_price = None
         
-        # Store the actual fetched price for return
+        # Store the actual fetched price for return (or estimate from strikes)
         actual_stock_price = underlying_price
         
         # Get REAL available strikes from IBKR
@@ -109,11 +111,22 @@ def get_all_strikes(ticker: str, expiration: str, use_live_data: bool = True, re
             min_strike = underlying_price * 0.8   # 80% of stock price
             max_strike = underlying_price * 1.2   # 120% of stock price
         else:
-            # Fallback for invalid price - use broader range for safety
-            # This handles pre-market or connection issues
-            print("Warning: Using fallback strike range (no valid stock price)")
-            min_strike = 150
-            max_strike = 300
+            # No stock price - try to infer from strike range
+            # Most liquid strikes are usually in the middle third of the range
+            all_strikes_sorted = sorted(real_strikes)
+            total_strikes = len(all_strikes_sorted)
+            if total_strikes > 30:
+                # Take middle 40% of strikes
+                start_idx = int(total_strikes * 0.3)
+                end_idx = int(total_strikes * 0.7)
+                min_strike = all_strikes_sorted[start_idx]
+                max_strike = all_strikes_sorted[end_idx]
+                print(f"No stock price available - using middle range of strikes: ${min_strike:.0f}-${max_strike:.0f}")
+            else:
+                # Use all strikes if not too many
+                min_strike = min(real_strikes)
+                max_strike = max(real_strikes)
+                print(f"No stock price available - using all {total_strikes} strikes")
             
         reasonable_strikes = [s for s in real_strikes if min_strike <= s <= max_strike]
         if len(reasonable_strikes) < len(real_strikes):
@@ -240,6 +253,17 @@ def get_all_strikes(ticker: str, expiration: str, use_live_data: bool = True, re
         print(f"  Strikes with valid bids: {valid.sum()}")
         
         if return_stock_price:
+            # If we couldn't get stock price, estimate from ATM strike
+            if actual_stock_price is None:
+                # Find strike with delta closest to 0.5 (ATM)
+                if len(deltas) > 0 and deltas.max() > 0:
+                    atm_idx = abs(deltas - 0.5).argmin()
+                    actual_stock_price = float(strikes.iloc[atm_idx])
+                    print(f"Estimated stock price from ATM strike: ${actual_stock_price:.2f}")
+                else:
+                    # Last resort - use middle strike
+                    actual_stock_price = float(strikes.median())
+                    print(f"Estimated stock price from middle strike: ${actual_stock_price:.2f}")
             return bids, strikes, deltas, actual_stock_price
         return bids, strikes, deltas
         

@@ -80,16 +80,19 @@ class OptionsDataFetcher:
             app.reqMarketDataType(1)  # 1 = REAL-TIME
             
             # Request market data
+            # Empty string gets all available ticks
             app.reqMktData(req_id, contract, "", False, False, [])
             
             # Wait for data (give more time for stock data)
-            time.sleep(5)
+            logger.info(f"Waiting for {symbol} stock data (req_id={req_id})...")
+            time.sleep(8)  # Increased wait time
             
             # Cancel market data
             app.cancelMktData(req_id)
             
             if req_id in app.market_data:
                 data = app.market_data[req_id]
+                logger.info(f"Raw market data for {symbol}: {data}")
                 
                 stock_data = {
                     'symbol': symbol,
@@ -128,7 +131,18 @@ class OptionsDataFetcher:
         """Get underlying stock price"""
         stock_data = self.get_stock_data(symbol)
         if stock_data:
-            return stock_data.get('last') or stock_data.get('close')
+            # Try multiple price fields in order of preference
+            price = (stock_data.get('last') or 
+                    stock_data.get('close') or
+                    stock_data.get('bid') or
+                    stock_data.get('ask'))
+            if price and price > 0:
+                logger.info(f"Got underlying price for {symbol}: ${price:.2f}")
+                return price
+            else:
+                logger.warning(f"Stock data exists but no valid price for {symbol}: {stock_data}")
+        else:
+            logger.warning(f"No stock data received for {symbol}")
         return None
         
     def get_option_chain_dates(self, symbol: str) -> List[str]:
