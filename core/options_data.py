@@ -255,9 +255,9 @@ class OptionsDataFetcher:
             
             req_id = self._get_next_req_id()
             
-            # Request delayed market data if live data not available
-            # This helps when you don't have real-time subscriptions
-            app.reqMarketDataType(3)  # 3 = DELAYED (free 15-min delayed data)
+            # Request real-time market data (since you have subscription)
+            # Use type 1 for real-time, type 3 for delayed
+            app.reqMarketDataType(1)  # 1 = REAL-TIME (requires subscription)
             
             # Request market data with prices AND Greeks
             # Request both price ticks and computed Greeks (tick type 13)
