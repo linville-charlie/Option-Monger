@@ -72,7 +72,7 @@ class TestOptionsApp(EWrapper, EClient):
                 print(f"    Theta: {theta:.4f}")
             if vega is not None and vega != -2 and vega != -1:
                 print(f"    Vega: {vega:.4f}")
-            if impliedVol > 0:
+            if impliedVol is not None and impliedVol > 0:
                 print(f"    IV: {impliedVol:.2%}")
                 
     def marketDataType(self, reqId, marketDataType):
