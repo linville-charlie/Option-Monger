@@ -97,25 +97,6 @@ except Exception as e:
     print("2. Market might be closed")
     print("3. Connection settings incorrect")
     print("4. No market data subscription")
-    print("\nTrying with demo data instead...")
-    
-    try:
-        # Fallback to demo data
-        results = find_best_options(
-            ticker=ticker,
-            expiration=expiration,
-            capital=capital,
-            use_live_data=False,  # Demo data
-            n_simulations=200
-        )
-        
-        print("\n" + "="*70)
-        print("DEMO RESULTS (Live data unavailable)")
-        print("="*70)
-        print(results['recommendation'])
-        
-    except Exception as e2:
-        print(f"Demo also failed: {e2}")
 
 print("\n" + "="*70)
 print("END OF TEST")

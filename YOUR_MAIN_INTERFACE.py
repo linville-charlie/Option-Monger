@@ -58,7 +58,6 @@ from typing import Union, List, Tuple, Optional, Dict
 
 def get_option_data(ticker: str, 
                    expiration: str,
-                   use_live_data: bool = True,
                    return_stock_price: bool = False) -> Union[Tuple[pd.Series, pd.Series, pd.Series], Tuple[pd.Series, pd.Series, pd.Series, float]]:
     """
     Get the three option data vectors for any ticker and expiration.
@@ -66,8 +65,6 @@ def get_option_data(ticker: str,
     Args:
         ticker: Stock symbol (e.g., 'AAPL')
         expiration: Expiration date in YYYYMMDD format (e.g., '20250117')
-        use_live_data: If True, fetch real strikes from IB Gateway
-                      If False, use demo data with $0.50 increments
         return_stock_price: If True, also return current stock price
     
     Returns:
@@ -88,7 +85,7 @@ def get_option_data(ticker: str,
         bids, strikes, deltas, stock_price = get_option_data('AAPL', '20250117', return_stock_price=True)
         print(f"Current stock price: ${stock_price:.2f}")
     """
-    return get_all_strikes(ticker, expiration, use_live_data, return_stock_price)
+    return get_all_strikes(ticker, expiration, return_stock_price)
 
 
 # ==============================================================================
@@ -601,8 +598,7 @@ def find_best_options(ticker: str,
                      capital: float,
                      max_contracts_per_strike: int = 50,
                      n_simulations: int = 200,
-                     optimization_method: str = 'auto',
-                     use_live_data: bool = True) -> Dict:
+                     optimization_method: str = 'auto') -> Dict:
     """
     Find optimal covered call positions for any ticker.
     
@@ -618,7 +614,6 @@ def find_best_options(ticker: str,
         max_contracts_per_strike: Maximum contracts per strike (default 50)
         n_simulations: Simulations for Monte Carlo (default 200)
         optimization_method: 'auto', 'fast', or 'thorough' (default 'auto')
-        use_live_data: Use real IBKR data if True, demo if False
         
     Returns:
         Dictionary with:
@@ -906,7 +901,7 @@ def quick_example():
     
     # 1. Get your three vectors
     print("\n1. Getting option data for AAPL...")
-    bids, strikes, deltas = get_option_data('AAPL', '20250117', use_live_data=False)
+    bids, strikes, deltas = get_option_data('AAPL', '20250117')
     print(f"   ✓ Got {len(strikes)} strikes")
     
     # 2. Create position vector with quantities

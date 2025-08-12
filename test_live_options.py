@@ -36,7 +36,7 @@ try:
         max_contracts_per_strike=50,
         n_simulations=1000,  # More simulations for better accuracy
         optimization_method='auto',
-        use_live_data=True  # USE LIVE DATA
+        # Always uses live data
     )
     
     print("\n" + "="*60)

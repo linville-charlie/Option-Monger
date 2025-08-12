@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
 
 
-def get_all_strikes(ticker: str, expiration: str, use_live_data: bool = True, return_stock_price: bool = False) -> Tuple:
+def get_all_strikes(ticker: str, expiration: str, return_stock_price: bool = False) -> Tuple:
     """
     Get option data for ALL available strikes from IBKR.
     
@@ -26,7 +26,6 @@ def get_all_strikes(ticker: str, expiration: str, use_live_data: bool = True, re
     Args:
         ticker: Stock symbol (e.g., 'AAPL')
         expiration: Expiration date in YYYYMMDD format (e.g., '20250117')
-        use_live_data: If True, fetch real strikes from IB Gateway
     
     Returns:
         If return_stock_price=False:
@@ -47,28 +46,10 @@ def get_all_strikes(ticker: str, expiration: str, use_live_data: bool = True, re
         >>> print(f"Current stock price: ${stock_price:.2f}")
     """
     
-    if not use_live_data:
-        # Demo mode with simulated $0.50 increments
-        result = _generate_demo_strikes(ticker, expiration)
-        if return_stock_price:
-            # Estimate stock price from ATM strike in demo mode
-            bids, strikes, deltas = result
-            atm_idx = np.abs(deltas - 0.5).argmin()
-            stock_price = float(strikes.iloc[atm_idx])
-            return bids, strikes, deltas, stock_price
-        return result
-    
     # Connect to IB Gateway
     conn = IBKRConnection()
     if not conn.connect():
-        print("Failed to connect to IB Gateway. Using demo data...")
-        result = _generate_demo_strikes(ticker, expiration)
-        if return_stock_price:
-            bids, strikes, deltas = result
-            atm_idx = np.abs(deltas - 0.5).argmin()
-            stock_price = float(strikes.iloc[atm_idx])
-            return bids, strikes, deltas, stock_price
-        return result
+        raise ConnectionError("Failed to connect to IB Gateway. Please ensure IB Gateway is running and configured correctly.")
     
     try:
         fetcher = OptionsDataFetcher(conn)
@@ -91,15 +72,8 @@ def get_all_strikes(ticker: str, expiration: str, use_live_data: bool = True, re
         real_strikes = fetcher.get_option_strikes(ticker, expiration)
         
         if not real_strikes:
-            print(f"No strikes found. Using demo data...")
             conn.disconnect()
-            result = _generate_demo_strikes(ticker, expiration)
-            if return_stock_price:
-                bids, strikes, deltas = result
-                atm_idx = np.abs(deltas - 0.5).argmin()
-                stock_price = float(strikes.iloc[atm_idx])
-                return bids, strikes, deltas, stock_price
-            return result
+            raise ValueError(f"No strikes found for {ticker} {expiration}. Check that the symbol and expiration are valid.")
         
         print(f"Found {len(real_strikes)} real strikes from IBKR")
         print(f"Strike range: ${min(real_strikes):.2f} to ${max(real_strikes):.2f}")
@@ -145,9 +119,8 @@ def get_all_strikes(ticker: str, expiration: str, use_live_data: bool = True, re
             common_increment = max(set(increments), key=increments.count)
             print(f"Common strike increment: ${common_increment:.2f}")
         
-        # Option 1: Try to fetch real market data (requires subscription)
-        # For far-dated expirations, many strikes may not exist
-        fetch_real_data = True  # Fetch real option data from IBKR
+        # Fetch real market data from IBKR (requires subscription)
+        fetch_real_data = True  # Always fetch real option data from IBKR
         
         if fetch_real_data:
             print(f"\nFetching market data for {len(real_strikes)} strikes...")
@@ -185,61 +158,9 @@ def get_all_strikes(ticker: str, expiration: str, use_live_data: bool = True, re
             
             # Check if we got enough real data
             valid_data = sum(1 for b in bids_list if b > 0)
-            if valid_data < 10:  # Less than 10 valid strikes
+            if valid_data < 5:  # Less than 5 valid strikes
                 print(f"\nWarning: Only {valid_data} strikes have market data.")
-                print("Falling back to demo data for better results.")
-                fetch_real_data = False  # Force demo mode
-        
-        if not fetch_real_data:
-            # Option 2: Generate realistic demo data for the REAL strikes
-            print("\nGenerating demo bid/delta data for real IBKR strikes...")
-            print("(For real market data, enable fetch_real_data and ensure you have subscriptions)")
-            
-            bids_list = []
-            deltas_list = []
-            
-            for strike in real_strikes:
-                moneyness = underlying_price / strike
-                
-                # Calculate realistic delta
-                if moneyness > 1.2:  # Deep ITM
-                    delta = 0.90 + np.random.uniform(0, 0.08)
-                elif moneyness > 1.05:  # ITM
-                    delta = 0.6 + (moneyness - 1.05) * 2.0
-                elif moneyness > 0.95:  # ATM region
-                    delta = 0.3 + (moneyness - 0.95) * 3.0
-                elif moneyness > 0.8:  # OTM
-                    delta = 0.05 + (moneyness - 0.8) * 1.25
-                else:  # Deep OTM
-                    delta = max(0.001, 0.05 * moneyness)
-                
-                delta = min(0.99, max(0.001, delta))
-                deltas_list.append(round(delta, 4))
-                
-                # Calculate realistic bid
-                intrinsic_value = max(0, underlying_price - strike)
-                
-                if intrinsic_value > 0:
-                    # ITM - intrinsic + time value
-                    time_value = 3.0 * np.exp(-0.5 * abs(moneyness - 1))
-                    bid = intrinsic_value + time_value
-                else:
-                    # OTM - only time value
-                    distance = abs(strike - underlying_price) / underlying_price
-                    if distance < 0.1:  # Near ATM
-                        bid = 5.0 * np.exp(-distance * 10)
-                    elif distance < 0.3:  # Moderate OTM
-                        bid = 2.0 * np.exp(-distance * 8)
-                    else:  # Far OTM
-                        bid = max(0.01, 0.5 * np.exp(-distance * 5))
-                
-                # Very far strikes might have no bid
-                if moneyness < 0.5 or moneyness > 2.0:
-                    if np.random.random() > 0.7:
-                        bid = 0.0
-                        delta = 0.0
-                
-                bids_list.append(round(bid, 2))
+                print("Check that you have the appropriate market data subscriptions.")
         
         # Convert to pandas Series
         bids = pd.Series(bids_list, name='bids')
@@ -272,75 +193,7 @@ def get_all_strikes(ticker: str, expiration: str, use_live_data: bool = True, re
         print("Disconnected from IB Gateway")
 
 
-def _generate_demo_strikes(ticker: str, expiration: str) -> Tuple[pd.Series, pd.Series, pd.Series]:
-    """Generate demo data with $0.50 increments as requested"""
-    
-    # Demo underlying prices
-    demo_prices = {
-        'AAPL': 226.50,
-        'TSLA': 245.00,
-        'SPY': 450.00,
-        'QQQ': 380.00,
-        'NVDA': 450.00,
-    }
-    
-    underlying = demo_prices.get(ticker.upper(), 100.0)
-    
-    # Generate strikes with $0.50 increments
-    interval = 0.5
-    start = max(0.5, int(underlying * 0.3 / 0.5) * 0.5)
-    end = int(underlying * 2.0 / 0.5) * 0.5
-    
-    all_strikes = []
-    current = start
-    while current <= end:
-        all_strikes.append(float(current))
-        current += interval
-    
-    # Generate demo bids and deltas
-    all_bids = []
-    all_deltas = []
-    
-    for strike in all_strikes:
-        moneyness = underlying / strike
-        
-        # Delta calculation
-        if moneyness > 1.2:
-            delta = 0.95 + np.random.uniform(-0.02, 0.04)
-        elif moneyness > 1.05:
-            delta = 0.6 + (moneyness - 1.05) * 2.0
-        elif moneyness > 0.95:
-            delta = 0.3 + (moneyness - 0.95) * 3.0
-        elif moneyness > 0.8:
-            delta = 0.05 + (moneyness - 0.8) * 1.25
-        else:
-            delta = max(0.001, 0.05 * moneyness)
-        
-        delta = min(0.99, max(0.001, delta))
-        all_deltas.append(round(delta, 4))
-        
-        # Bid calculation
-        intrinsic = max(0, underlying - strike)
-        if intrinsic > 0:
-            time_value = 3.0 * np.exp(-0.5 * abs(moneyness - 1))
-            bid = intrinsic + time_value
-        else:
-            distance = abs(strike - underlying) / underlying
-            if distance < 0.1:
-                bid = 5.0 * np.exp(-distance * 10)
-            elif distance < 0.3:
-                bid = 2.0 * np.exp(-distance * 8)
-            else:
-                bid = max(0.01, 0.5 * np.exp(-distance * 5))
-        
-        all_bids.append(round(bid, 2))
-    
-    print(f"\nDemo mode: Generated {len(all_strikes)} strikes with $0.50 increments")
-    print(f"Strike range: ${min(all_strikes):.2f} to ${max(all_strikes):.2f}")
-    
-    return (pd.Series(all_bids, name='bids'),
-            pd.Series(all_strikes, name='strikes'),
-            pd.Series(all_deltas, name='deltas'))
+# Demo function removed - only real data allowed
 
 
 def main():
@@ -350,25 +203,19 @@ def main():
     # Parse arguments
     ticker = 'AAPL'
     expiration = '20250117'
-    use_live = True
     
     if len(sys.argv) > 1:
         ticker = sys.argv[1]
     if len(sys.argv) > 2:
         expiration = sys.argv[2]
-    if '--demo' in sys.argv:
-        use_live = False
     
     print("="*70)
     print(f"Getting ALL strikes for {ticker} expiry {expiration}")
-    if use_live:
-        print("Mode: LIVE (fetching real strikes from IBKR)")
-    else:
-        print("Mode: DEMO (using $0.50 increment simulation)")
+    print("Mode: LIVE (fetching real strikes from IBKR)")
     print("="*70)
     
     # Get the data
-    bids, strikes, deltas = get_all_strikes(ticker, expiration, use_live_data=use_live)
+    bids, strikes, deltas = get_all_strikes(ticker, expiration)
     
     # Display summary
     print(f"\nSummary:")

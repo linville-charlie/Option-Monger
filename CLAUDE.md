@@ -35,10 +35,10 @@ results = find_best_options('AAPL', '20250117', 100000)
 `Total P&L = Premium Collected + (Exit Price - Entry Price) × Shares`
 
 ## Connection Configuration
-- IB Gateway runs on Windows host
-- WSL connects to: 172.21.112.1:4002
-- Must add WSL IP to IB Gateway trusted IPs
+- IB Gateway runs on port 8000
+- Use client ID 1 to avoid conflicts
 - Paper trading account: DUE723251
+- **REQUIRES LIVE MARKET DATA** - No demo/test data available
 
 ## Key Implementation Details
 1. **Real Stock Price**: Fetches actual current price from IBKR for accurate share calculations
@@ -49,21 +49,22 @@ results = find_best_options('AAPL', '20250117', 100000)
 
 ## Testing Commands
 ```bash
-# Test covered call optimization
-python test_covered_calls_only.py
+# Test with real IBKR data during market hours
+python test_live_options.py
 
-# Test production readiness
-python test_production_ready.py
+# Quick test to verify connection
+python quick_test.py
 
-# Test with real IBKR data
-python YOUR_MAIN_INTERFACE.py  # with use_live_data=True
+# Debug connection issues
+python debug_stock_price.py
 ```
 
 ## Common Issues and Solutions
-1. **Connection timeout**: Restart IB Gateway, check trusted IPs
-2. **Insufficient capital**: Need at least Stock Price × 100 for one contract
-3. **No market data**: Normal - requires subscriptions (demo mode works without)
-4. **Import errors**: Check core/ directory is in path
+1. **Connection timeout**: Restart IB Gateway, check port 8000
+2. **Competing session error**: Use client ID 1 (set in .env)
+3. **No market data**: Requires OPRA subscription for options
+4. **Insufficient capital**: Need at least Stock Price × 100 for one contract
+5. **Import errors**: Check core/ directory is in path
 
 ## File Organization
 - Core functionality → `core/`

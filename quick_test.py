@@ -23,7 +23,6 @@ try:
     bids, strikes, deltas, stock_price = get_all_strikes(
         ticker, 
         expiration, 
-        use_live_data=True,
         return_stock_price=True
     )
     
