@@ -64,13 +64,13 @@ class TestOptionsApp(EWrapper, EClient):
         }
         if tickType in tick_names:
             print(f"  {tick_names[tickType]} Greeks:")
-            if delta != -2 and delta != -1:
+            if delta is not None and delta != -2 and delta != -1:
                 print(f"    Delta: {delta:.4f}")
-            if gamma != -2 and gamma != -1:
+            if gamma is not None and gamma != -2 and gamma != -1:
                 print(f"    Gamma: {gamma:.4f}")
-            if theta != -2 and theta != -1:
+            if theta is not None and theta != -2 and theta != -1:
                 print(f"    Theta: {theta:.4f}")
-            if vega != -2 and vega != -1:
+            if vega is not None and vega != -2 and vega != -1:
                 print(f"    Vega: {vega:.4f}")
             if impliedVol > 0:
                 print(f"    IV: {impliedVol:.2%}")
