@@ -36,8 +36,11 @@ class IBKRApp(EWrapper, EClient):
         """Handle errors from IB"""
         if errorCode == 202:
             logger.warning(f"Order cancelled: {errorString}")
+        elif errorCode in [2104, 2106, 2158]:
+            # Farm connection OK messages - not really errors
+            logger.debug(f"Info {errorCode}: {errorString}")
         elif errorCode >= 2000:
-            logger.error(f"Error {errorCode}: {errorString}")
+            logger.warning(f"Warning {errorCode}: {errorString}")
             self._errors.append((errorCode, errorString))
         else:
             logger.info(f"Info {errorCode}: {errorString}")
@@ -142,15 +145,15 @@ class IBKRApp(EWrapper, EClient):
         if tickType in tick_type_names:
             field_name = tick_type_names[tickType]
             
-            # Store the Greeks data
+            # Store the Greeks data (handle None values)
             greeks_data = {
-                'implied_vol': impliedVol if impliedVol > 0 else None,
-                'delta': delta if delta != -2 and delta != -1 else None,
-                'gamma': gamma if gamma != -2 and gamma != -1 else None,
-                'vega': vega if vega != -2 and vega != -1 else None,
-                'theta': theta if theta != -2 and theta != -1 else None,
-                'opt_price': optPrice if optPrice > 0 else None,
-                'und_price': undPrice if undPrice > 0 else None
+                'implied_vol': impliedVol if impliedVol is not None and impliedVol > 0 else None,
+                'delta': delta if delta is not None and delta != -2 and delta != -1 else None,
+                'gamma': gamma if gamma is not None and gamma != -2 and gamma != -1 else None,
+                'vega': vega if vega is not None and vega != -2 and vega != -1 else None,
+                'theta': theta if theta is not None and theta != -2 and theta != -1 else None,
+                'opt_price': optPrice if optPrice is not None and optPrice > 0 else None,
+                'und_price': undPrice if undPrice is not None and undPrice > 0 else None
             }
             
             self.market_data[reqId][field_name] = greeks_data
@@ -294,8 +297,8 @@ class IBKRConnection:
     def get_app(self) -> Optional[IBKRApp]:
         """Get the app instance"""
         if not self.is_connected():
-            if not self.connect():
-                return None
+            logger.warning("Not connected to IB Gateway")
+            return None
         return self.app
         
     def test_connection(self) -> bool:
