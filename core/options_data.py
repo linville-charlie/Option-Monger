@@ -76,11 +76,14 @@ class OptionsDataFetcher:
             
             req_id = self._get_next_req_id()
             
+            # Request real-time market data for stock
+            app.reqMarketDataType(1)  # 1 = REAL-TIME
+            
             # Request market data
             app.reqMktData(req_id, contract, "", False, False, [])
             
-            # Wait for data
-            time.sleep(3)
+            # Wait for data (give more time for stock data)
+            time.sleep(5)
             
             # Cancel market data
             app.cancelMktData(req_id)

@@ -102,12 +102,27 @@ def get_all_strikes(ticker: str, expiration: str, use_live_data: bool = True, re
         print(f"Found {len(real_strikes)} real strikes from IBKR")
         print(f"Strike range: ${min(real_strikes):.2f} to ${max(real_strikes):.2f}")
         
-        # Filter to reasonable strikes (within 50% of current price)
-        # This avoids trying to fetch data for strikes that don't actually trade
-        reasonable_strikes = [s for s in real_strikes if 0.5 * underlying_price <= s <= 1.5 * underlying_price]
+        # Filter to reasonable strikes
+        # For weekly options, filter more aggressively to liquid strikes
+        # AAPL typically has liquid strikes from -20% to +20% of stock price
+        if underlying_price and underlying_price > 50:  # Valid price
+            min_strike = underlying_price * 0.8   # 80% of stock price
+            max_strike = underlying_price * 1.2   # 120% of stock price
+        else:
+            # Fallback for invalid price - use AAPL typical range
+            min_strike = 180
+            max_strike = 280
+            
+        reasonable_strikes = [s for s in real_strikes if min_strike <= s <= max_strike]
         if len(reasonable_strikes) < len(real_strikes):
-            print(f"Filtering to {len(reasonable_strikes)} reasonable strikes (50%-150% of stock price)")
+            print(f"Filtering to {len(reasonable_strikes)} liquid strikes (${min_strike:.0f}-${max_strike:.0f})")
             real_strikes = reasonable_strikes
+        
+        # If still too many strikes, limit to closest 30
+        if len(real_strikes) > 30:
+            real_strikes = sorted(real_strikes, key=lambda x: abs(x - underlying_price))[:30]
+            real_strikes = sorted(real_strikes)  # Re-sort by strike
+            print(f"Limited to 30 closest strikes")
         
         # Determine actual increments
         if len(real_strikes) > 1:
