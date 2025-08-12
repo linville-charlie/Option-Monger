@@ -255,11 +255,17 @@ class OptionsDataFetcher:
             
             req_id = self._get_next_req_id()
             
-            # Request market data with Greeks (use genericTickList 106)
-            app.reqMktData(req_id, contract, "106", False, False, [])
+            # Request delayed market data if live data not available
+            # This helps when you don't have real-time subscriptions
+            app.reqMarketDataType(3)  # 3 = DELAYED (free 15-min delayed data)
             
-            # Wait for data
-            time.sleep(4)
+            # Request market data with prices AND Greeks
+            # Request both price ticks and computed Greeks (tick type 13)
+            # Empty string gets bid/ask/last prices by default
+            app.reqMktData(req_id, contract, "", False, False, [])
+            
+            # Wait for data (longer for delayed data)
+            time.sleep(5)
             
             # Cancel market data
             app.cancelMktData(req_id)

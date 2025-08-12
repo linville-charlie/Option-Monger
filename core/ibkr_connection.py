@@ -70,11 +70,23 @@ class IBKRApp(EWrapper, EClient):
             6: 'high',
             7: 'low',
             9: 'close',
-            14: 'open'
+            14: 'open',
+            66: 'delayed_bid',
+            67: 'delayed_ask',
+            68: 'delayed_last',
+            72: 'delayed_high',
+            73: 'delayed_low',
+            75: 'delayed_close'
         }
         
         if tickType in tick_names:
-            self.market_data[reqId][tick_names[tickType]] = price
+            field_name = tick_names[tickType]
+            self.market_data[reqId][field_name] = price
+            # Also store delayed data as regular data if regular not available
+            if tickType >= 66 and field_name.startswith('delayed_'):
+                regular_field = field_name.replace('delayed_', '')
+                if regular_field not in self.market_data[reqId]:
+                    self.market_data[reqId][regular_field] = price
             
     def tickSize(self, reqId: TickerId, tickType, size):
         """Receive tick size"""
