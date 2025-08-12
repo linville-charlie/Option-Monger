@@ -46,7 +46,6 @@ option_monger.log
 
 # Jupyter
 .ipynb_checkpoints/
-*.ipynb
 
 # Testing
 .coverage
