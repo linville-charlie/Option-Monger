@@ -109,9 +109,11 @@ def get_all_strikes(ticker: str, expiration: str, use_live_data: bool = True, re
             min_strike = underlying_price * 0.8   # 80% of stock price
             max_strike = underlying_price * 1.2   # 120% of stock price
         else:
-            # Fallback for invalid price - use AAPL typical range
-            min_strike = 180
-            max_strike = 280
+            # Fallback for invalid price - use broader range for safety
+            # This handles pre-market or connection issues
+            print("Warning: Using fallback strike range (no valid stock price)")
+            min_strike = 150
+            max_strike = 300
             
         reasonable_strikes = [s for s in real_strikes if min_strike <= s <= max_strike]
         if len(reasonable_strikes) < len(real_strikes):
