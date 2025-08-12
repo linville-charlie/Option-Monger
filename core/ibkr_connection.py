@@ -277,7 +277,9 @@ class IBKRConnection:
         try:
             self.app.run()
         except Exception as e:
-            logger.error(f"Error in message loop: {e}")
+            # Only log actual errors, not disconnections
+            if "NoneType" not in str(e) and self._connected:
+                logger.error(f"Error in message loop: {e}")
             self._connected = False
             
     def disconnect(self):
