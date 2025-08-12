@@ -17,12 +17,7 @@ echo Step 2: Waiting for cleanup...
 timeout /t 3 /nobreak >nul
 
 echo.
-echo Step 3: Testing connection...
-python debug_stock_price.py
-
-echo.
 echo ============================================================
-echo If the test succeeded, you can now run your scripts.
-echo If it failed, try restarting IB Gateway.
+echo processes killed.
 echo ============================================================
 pause
