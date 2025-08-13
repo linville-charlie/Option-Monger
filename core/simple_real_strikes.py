@@ -81,7 +81,7 @@ def get_all_strikes(ticker: str, expiration: str, return_stock_price: bool = Fal
         # Filter to reasonable strikes
         # For weekly options, filter more aggressively to liquid strikes
         # AAPL typically has liquid strikes from -20% to +20% of stock price
-        if underlying_price and underlying_price > 50:  # Valid price
+        if underlying_price and underlying_price > 0:  # Valid price (any positive price)
             min_strike = underlying_price * 0.8   # 80% of stock price
             max_strike = underlying_price * 1.2   # 120% of stock price
         else:
