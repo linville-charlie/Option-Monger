@@ -8,6 +8,7 @@ OptionMonger is a **covered call optimization system** for Interactive Brokers t
 - **Capital buys shares** - not option premiums
 - **We sell calls** - collecting premium against owned shares
 - **Always exit at expiration** - sell all shares whether ITM or OTM
+- **NO demo data** - all test/demo data capabilities removed for safety
 
 ## Main Entry Point
 `find_best_options()` in YOUR_MAIN_INTERFACE.py - The ONE function you need:
@@ -46,6 +47,17 @@ results = find_best_options('AAPL', '20250117', 100000)
 3. **Mixed ITM/OTM**: Each position evaluated independently at expiration
 4. **Vectorized Math**: All positions calculated simultaneously
 5. **100 Share Multiplier**: All contracts represent 100 shares
+6. **Stock Price Filtering**: Accepts all stocks > $0 (no minimum price threshold)
+
+## Interactive Analysis
+Use the optimized Jupyter notebook for live trading:
+```bash
+# Windows: Run from scripts/ directory
+start_notebook.bat
+
+# Or manually:
+jupyter notebook notebooks/live_options_trading_optimized.ipynb
+```
 
 ## Testing Commands
 ```bash
@@ -56,18 +68,37 @@ python test_live_options.py
 python quick_test.py
 
 # Debug connection issues
-python debug_stock_price.py
+python utilities/debug_stock_price.py
+
+# Check for competing sessions
+python utilities/check_sessions.py
 ```
 
 ## Common Issues and Solutions
 1. **Connection timeout**: Restart IB Gateway, check port 8000
-2. **Competing session error**: Use client ID 1 (set in .env)
+2. **Competing session error**: Use client ID 1 (set in .env) or run `utilities/kill_all_connections.py`
 3. **No market data**: Requires OPRA subscription for options
 4. **Insufficient capital**: Need at least Stock Price × 100 for one contract
-5. **Import errors**: Check core/ directory is in path
+5. **Import errors in notebook**: Fixed - notebook now adds parent dir to path
+6. **Stock price filtering**: Fixed - now accepts all stocks > $0 (was > $50)
+
+## Recent Fixes
+- Fixed stock price threshold to accept lower-priced stocks (SONY, etc.)
+- Fixed notebook imports to find YOUR_MAIN_INTERFACE.py
+- Fixed notebook path in start_notebook.bat
+- Removed ALL demo/test data generation for safety
+- Fixed calculation bugs (win rate, return percentages)
+- Reorganized project structure for clarity
 
 ## File Organization
-- Core functionality → `core/`
-- Examples → `examples/`
-- Tests → `tests/`
-- Old versions → `old_files/` (can be deleted)
+```
+OptionMonger/
+├── YOUR_MAIN_INTERFACE.py     # Main API
+├── core/                       # Core functionality
+├── notebooks/                  # Jupyter notebooks  
+├── utilities/                  # Helper tools
+├── scripts/                    # Setup scripts
+├── tests/                      # Unit tests
+├── examples/                   # Examples
+└── docs/                       # Documentation
+```
