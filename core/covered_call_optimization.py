@@ -196,7 +196,7 @@ def optimize_covered_calls(strikes: pd.Series,
         'premium_collected': premium_collected,
         'net_capital_after_premium': capital_for_shares - premium_collected,
         'current_stock_price': current_stock_price,
-        'return_on_capital': (expected_pnl / capital_for_shares * 100) if capital_for_shares > 0 else 0
+        'return_on_capital': ((expected_pnl / capital_for_shares) * 100) if capital_for_shares > 0 else 0
     }
 
 
@@ -371,6 +371,6 @@ def optimize_covered_calls_continuous(strikes: pd.Series,
         'premium_collected': premium_collected,
         'net_capital_after_premium': capital_for_shares - premium_collected,
         'current_stock_price': current_stock_price,
-        'return_on_capital': (final_pnls.mean() / capital_for_shares * 100) if capital_for_shares > 0 else 0,
+        'return_on_capital': ((final_pnls.mean() / capital_for_shares) * 100) if capital_for_shares > 0 else 0,
         'optimization_success': True
     }
