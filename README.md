@@ -1,14 +1,19 @@
-# OptionMonger - Covered Call Optimization for IBKR
+# OptionMonger 📈
 
-A covered call optimization system for Interactive Brokers that finds the optimal strikes to sell calls against your owned shares.
+A sophisticated covered call optimization system for Interactive Brokers that finds optimal strike prices to maximize returns while managing risk.
 
-## 🎯 What It Does
+## 🎯 Overview
 
-**COVERED CALLS ONLY** - This system helps you:
-1. Determine how many shares to buy with your capital
-2. Find the optimal call strikes to sell
-3. Calculate expected P&L including premium collection
-4. Handle mixed ITM/OTM outcomes at expiration
+OptionMonger connects to Interactive Brokers (IB Gateway) to fetch live options data and uses Monte Carlo simulations to find the optimal covered call positions for your portfolio. The system is designed for selling covered calls against owned shares, maximizing premium income while managing assignment risk.
+
+## ✨ Key Features
+
+- **Live Market Data**: Real-time options data from Interactive Brokers
+- **Covered Call Optimization**: Advanced algorithms to find optimal strikes
+- **Monte Carlo Simulation**: Risk analysis with thousands of scenarios
+- **Position Management**: Track and optimize multiple positions
+- **Interactive Analysis**: Jupyter notebooks for live trading analysis
+- **Risk Metrics**: VaR, win rate, expected P&L calculations
 
 ## 🚀 Quick Start
 
@@ -16,7 +21,7 @@ A covered call optimization system for Interactive Brokers that finds the optima
 from YOUR_MAIN_INTERFACE import find_best_options
 
 # Find optimal covered calls for AAPL with $100,000
-results = find_best_options('AAPL', '20250117', 100000)
+results = find_best_options('AAPL', '20250815', 100000)
 
 print(results['recommendation'])
 print(f"Buy {results['shares_needed']} shares")
