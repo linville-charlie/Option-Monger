@@ -203,8 +203,8 @@ Override with `optimization_method='fast'` or `optimization_method='thorough'`.
 ### Installation
 
 ```bash
-git clone https://github.com/linville-charlie/OptionMonger.git
-cd OptionMonger
+git clone https://github.com/linville-charlie/Option-Monger.git
+cd Option-Monger
 pip install -r requirements.txt
 ```
 
