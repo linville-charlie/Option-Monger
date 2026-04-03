@@ -391,7 +391,7 @@ Set in `.env` file:
 TWS_HOST = "172.21.112.1"  # IB Gateway host
 TWS_PORT = 8000            # IB Gateway port
 TWS_CLIENT_ID = 1          # Client ID (avoid conflicts)
-ACCOUNT_ID = "DUE723251"   # Your IB account
+ACCOUNT_ID = "YOUR_ACCOUNT_ID"   # Your IB account
 ```
 
 ### Accessing Config

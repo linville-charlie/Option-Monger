@@ -1,141 +1,101 @@
-# OptionMonger 📈
+# OptionMonger
 
-A sophisticated covered call optimization system for Interactive Brokers that finds optimal strike prices to maximize returns while managing risk.
+A covered call optimization system for Interactive Brokers that uses Monte Carlo simulation to find optimal strike prices, maximizing premium income while managing assignment risk.
 
-## 🎯 Overview
+## Overview
 
-OptionMonger connects to Interactive Brokers (IB Gateway) to fetch live options data and uses Monte Carlo simulations to find the optimal covered call positions for your portfolio. The system is designed for selling covered calls against owned shares, maximizing premium income while managing assignment risk.
+OptionMonger connects to IB Gateway, fetches live options chain data, and runs thousands of Monte Carlo scenarios to identify the best covered call positions for a given portfolio and capital allocation. It evaluates every available strike across multiple expiration dates, calculating expected P&L, win rates, and risk metrics to produce actionable trade recommendations.
 
-## ✨ Key Features
+## Features
 
-- **Live Market Data**: Real-time options data from Interactive Brokers
-- **Covered Call Optimization**: Advanced algorithms to find optimal strikes
-- **Monte Carlo Simulation**: Risk analysis with thousands of scenarios
-- **Position Management**: Track and optimize multiple positions
-- **Interactive Analysis**: Jupyter notebooks for live trading analysis
-- **Risk Metrics**: VaR, win rate, expected P&L calculations
+- **Live Market Data Integration** -- Real-time options chains and stock prices from Interactive Brokers via IB Gateway
+- **Monte Carlo Optimization** -- Simulates thousands of price paths to evaluate expected outcomes for each strike
+- **Vectorized P&L Engine** -- All positions calculated simultaneously using NumPy for fast batch evaluation
+- **Risk Metrics** -- Value at Risk (VaR), win rate, expected P&L, and return on capital for every candidate position
+- **Position Tracking** -- Monitor open positions with real-time P&L updates
+- **Interactive Notebooks** -- Jupyter notebooks for live trading analysis and visualization
 
-## 🚀 Quick Start
+## Architecture
+
+```
+OptionMonger/
+├── YOUR_MAIN_INTERFACE.py         # Main entry point: find_best_options()
+├── core/
+│   ├── covered_call_optimization.py   # Optimization engine
+│   ├── simple_real_strikes.py         # Options data + stock price retrieval
+│   ├── position_tracker.py            # P&L tracking
+│   └── ibkr_connection.py             # IB Gateway connection management
+├── tests/                         # Unit and integration tests
+├── notebooks/                     # Jupyter notebooks for live analysis
+├── utilities/                     # Connection debugging tools
+└── docs/                          # Documentation
+```
+
+## How It Works
+
+### Covered Call Mechanics
+
+1. **Buy shares** with available capital (100 shares per contract)
+2. **Sell call options** against those shares, collecting premium upfront
+3. **At expiration**: ITM strikes result in shares called away at the strike price; OTM strikes let you sell shares at market price
+
+### P&L Formula
+
+```
+Total P&L = Premium Collected + (Exit Price - Entry Price) x Shares
+```
+
+The optimizer evaluates every available strike at this formula across Monte Carlo price paths, then ranks positions by risk-adjusted return.
+
+## Tech Stack
+
+| Component | Technology |
+|-----------|-----------|
+| Language | Python 3.11+ |
+| Broker API | Interactive Brokers (ib_insync) |
+| Numerical | NumPy, SciPy (Monte Carlo, vectorized math) |
+| Data | Pandas |
+| Visualization | Jupyter, Matplotlib |
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.11+
+- Interactive Brokers account with IB Gateway running
+- OPRA market data subscription (for options data)
+
+### Installation
+
+```bash
+git clone https://github.com/linville-charlie/OptionMonger.git
+cd OptionMonger
+pip install -r requirements.txt
+```
+
+### Configuration
+
+Set IB Gateway connection details in your `.env` file (see `.env.example`):
+
+```
+IB_HOST=127.0.0.1
+IB_PORT=4002
+IB_CLIENT_ID=1
+```
+
+### Usage
 
 ```python
 from YOUR_MAIN_INTERFACE import find_best_options
 
-# Find optimal covered calls for AAPL with $100,000
 results = find_best_options('AAPL', '20250815', 100000)
 
-print(results['recommendation'])
 print(f"Buy {results['shares_needed']} shares")
 print(f"Sell calls at: {results['optimal_positions']}")
 print(f"Expected P&L: ${results['expected_pnl']:,.2f}")
+print(f"Win Rate: {results['win_rate']:.1%}")
 ```
 
-## 💰 How Covered Calls Work
+## License
 
-### Money In:
-1. **Buy shares**: Your capital purchases shares (100 per contract)
-2. **Sell calls**: Collect premium immediately
-
-### Money Out (At Expiration):
-- **ITM strikes**: Shares called away at strike price
-- **OTM strikes**: You sell shares at market price
-- **Mixed outcomes**: Each contract handled independently
-
-### P&L Formula:
-```
-Total P&L = Premium Collected + (Exit Price - Entry Price) × Shares
-```
-
-## 📁 Project Structure
-
-```
-OptionMonger/
-│
-├── YOUR_MAIN_INTERFACE.py      # ⭐ Main entry point - find_best_options()
-│
-├── core/                        # Core functionality
-│   ├── covered_call_optimization.py  # Optimization logic
-│   ├── simple_real_strikes.py        # Gets option data & stock price
-│   ├── position_tracker.py           # P&L calculations
-│   ├── ibkr_connection.py            # IB Gateway connection
-│   └── ...
-│
-├── tests/                       # Test files
-│   ├── test_covered_calls_only.py
-│   ├── test_production_ready.py
-│   └── ...
-│
-└── COVERED_CALLS_GUIDE.md      # Detailed covered call documentation
-```
-
-## 🔧 Installation
-
-```bash
-# Clone the repository
-git clone <your-repo>
-
-# Install requirements
-pip install -r requirements.txt
-
-# Configure IB Gateway connection
-# Edit core/config.py with your settings
-```
-
-## 🔌 IB Gateway Setup
-
-1. Run IB Gateway on Windows host
-2. Add WSL IP to trusted IPs in IB Gateway
-3. Connection details:
-   - Host: 172.21.112.1
-   - Port: 4002
-   - Client ID: 1
-
-## 📊 Example Results
-
-```python
-results = find_best_options('AAPL', '20250117', 100000)
-
-# Output:
-# Buy 400 shares at $223.00
-# Sell 4 calls at $265.00 strike
-# Premium collected: $204.00
-# Expected P&L: $14,652.00
-# Win Rate: 88.2%
-```
-
-## ⚠️ Important Notes
-
-- **Covered Calls Only**: No long call buying functionality
-- **Capital Requirements**: Need at least Stock Price × 100
-- **Exit Strategy**: Always sell shares at expiration
-- **Risk**: Upside capped at strike price
-
-## 🧪 Testing
-
-```bash
-# Test covered call optimization
-python test_covered_calls_only.py
-
-# Test production readiness
-python test_production_ready.py
-
-# Test with demo data
-python YOUR_MAIN_INTERFACE.py
-```
-
-## 📝 Key Functions
-
-### Main Function:
-- `find_best_options(ticker, expiration, capital)` - Complete covered call optimization
-
-### Helper Functions:
-- `get_option_data()` - Get bids, strikes, deltas vectors
-- `create_positions()` - Create position vector with quantities
-- `calculate_covered_call_pnl()` - Calculate P&L for covered calls
-
-## 🤝 Contributing
-
-This is a focused covered call system. Please maintain this focus in any contributions.
-
-## 📄 License
-
-[Your License Here]
+MIT License
